@@ -1,8 +1,6 @@
-clipboard.c
-===========
+Heaper
+======
 
-A Linux kernel module which implements a LIFO clipboard character device. A user can redirect text into the device to push it into the clipboard, and keep doing so an arbitrary amount of times.  The user can also, at any time, pop previous-written clipboard copies from the device by reading from it.
+A toy Linux kernel module which implements a min-heap priority queue as a character device, written as a learning exercise.  Heaper will allow users to write() strings into it, and will return the "minimum" (currently based on length) string on a read() call.
 
-Under heavy development and currently unusable.
-
-Based on [an article by Linux Voice](http://www.linuxvoice.com/be-a-kernel-hacker/).
+Based loosely on [an article by Linux Voice](http://www.linuxvoice.com/be-a-kernel-hacker/).
