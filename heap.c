@@ -1,20 +1,25 @@
-// UCSB CS 130A, Fall 2014
-// Project 2
-
 #include "heap.h"
 #include <linux/string.h>
 #include <linux/slab.h>
+#include <linux/mutex.h>
 
 struct heap* init_heap(int size)
 {
 	struct heap *heap = (struct heap *)kmalloc(sizeof(struct heap), GFP_KERNEL);
+	if (unlikely(heap == NULL)) {
+		goto out;
+	}
+
 	heap->data = (char **)kmalloc(sizeof(char *) * (size + 1), GFP_KERNEL);
 	if (unlikely(heap->data == NULL)) {
-		return NULL;
+		kfree(heap);
+		goto out;
 	}
+	mutex_init(&heap->lock);
 	heap->size = size + 1; // array is 1 bigger than size we're given, since index 0 unused
 	heap->end = 0;
 
+out:
 	return heap;
 }
 

@@ -20,7 +20,7 @@ struct heap
 struct heap *init_heap(int size);
 void free_heap(struct heap *heap);
 
-void insert(struct heap *heap, char *address);
+void heap_insert(struct heap *heap, char *address);
 void bubble_up(struct heap *heap, int position);
 void bubble_down(struct heap *heap, int position);
 int parent(int position);
