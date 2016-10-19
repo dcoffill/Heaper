@@ -3,11 +3,11 @@
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
-#include <linux/list.h>
-#include <linux/hashtable.h>
 #include <linux/sched.h>
 #include "heap.h"
 #include <linux/mutex.h>
+#include <linux/slab.h>
+#include <linux/uaccess.h>
 
 
 /*
@@ -19,17 +19,26 @@
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("David Coffill <dcoffill@cs.ucsb.edu>");
-MODULE_DESCRIPTION("Kernel-based, file system device to return minimum string written to it");
+MODULE_DESCRIPTION("Kernel-based, file system device to return shortest string written to it");
 
 static unsigned long buffer_size = 8192;
 
 module_param(buffer_size, ulong, (S_IRUSR | S_IRGRP | S_IROTH));
 
-static struct heap *heap;
 
 static int heaper_open(struct inode *inode, struct file *file)
 {
-	return 0;
+	int result;
+	struct heap *heap_ptr;
+	heap_ptr = init_heap(buffer_size);
+	if (heap_ptr == NULL) {
+		result = -ENOMEM;
+		goto out;
+	}
+	file->private_data = heap_ptr;
+
+out:
+	return result;
 }
 
 static int heaper_read(struct file *file, char __user *out, size_t size, loff_t *off)
@@ -39,8 +48,48 @@ static int heaper_read(struct file *file, char __user *out, size_t size, loff_t 
 
 static int heaper_write(struct file *file, const char __user *in, size_t size, loff_t *off)
 {
+	struct heap *heap = (struct heap *)file->private_data;
+	char *string = NULL;
+	int result = 0;
+	if (unlikely(heap->end == heap->size - 1))
+	{
+		result = -ENOBUFS;
+		goto out;
+	}
 
-	return 0;
+	if (unlikely(heap == NULL))
+	{
+		result = -EFAULT;
+		goto out;
+	}
+
+	if (mutex_lock_interruptible(&heap->lock))
+	{
+		result = -ERESTART;
+		goto out;
+	}
+
+	string = (char *)kmalloc(size, GFP_KERNEL);
+	if (unlikely(string == NULL))
+	{
+		result = -EFAULT;
+		goto out_unlock;
+	}
+
+	if (copy_from_user(string, in, size))
+	{
+		result = -EFAULT;
+		goto out_unlock;
+	}
+
+	string[size - 1] = '\0';	/* ensure string is null terminated */
+	heap_insert(heap, string);
+
+out_unlock:
+	mutex_unlock(&heap->lock);
+
+out:
+	return result;
 }
 
 static int heaper_close(struct inode *inode, struct file *file)
@@ -69,9 +118,8 @@ static int __init heaper_init(void)
 		return -1;
 
 	misc_register(&heaper_misc_device);
-	heap = init_heap(1024);
 	printk(KERN_INFO "heaper device has been registered with buffer size %lu bytes\n",
-		   	buffer_size);
+		buffer_size);
 	printk(KERN_INFO "UID: %d\n", get_current_user()->uid.val);
 	return 0;
 }
