@@ -28,7 +28,7 @@ module_param(buffer_size, ulong, (S_IRUSR | S_IRGRP | S_IROTH));
 
 static int heaper_open(struct inode *inode, struct file *file)
 {
-	int result;
+	int result = 0;
 	struct heap *heap_ptr;
 	heap_ptr = init_heap(buffer_size);
 	if (heap_ptr == NULL) {
@@ -36,17 +36,19 @@ static int heaper_open(struct inode *inode, struct file *file)
 		goto out;
 	}
 	file->private_data = heap_ptr;
+	printk(KERN_INFO "Allocated heaper instance\n");
 
 out:
 	return result;
 }
 
-static int heaper_read(struct file *file, char __user *out, size_t size, loff_t *off)
+static ssize_t heaper_read(struct file *file, char __user *out, size_t size, loff_t *off)
 {
+	printk(KERN_INFO "Heaper read()\n");
 	return 0;
 }
 
-static int heaper_write(struct file *file, const char __user *in, size_t size, loff_t *off)
+static ssize_t heaper_write(struct file *file, const char __user *in, size_t size, loff_t *off)
 {
 	struct heap *heap = (struct heap *)file->private_data;
 	char *string = NULL;
@@ -81,6 +83,7 @@ static int heaper_write(struct file *file, const char __user *in, size_t size, l
 		result = -EFAULT;
 		goto out_unlock;
 	}
+	printk(KERN_INFO "Inserted %s with size %lu\n into Heaper", string, size);
 
 	string[size - 1] = '\0';	/* ensure string is null terminated */
 	heap_insert(heap, string);
@@ -94,6 +97,7 @@ out:
 
 static int heaper_close(struct inode *inode, struct file *file)
 {
+	printk(KERN_INFO "Heaper close()\n");
 	return 0;
 }
 
