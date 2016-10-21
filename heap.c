@@ -1,4 +1,9 @@
-#include "heap.h"
+/*
+ * Copyright 2014 David Coffill
+ * Licensed under the terms of the GPLv2
+ */
+
+ #include "heap.h"
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>

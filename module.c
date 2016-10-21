@@ -1,3 +1,7 @@
+/*
+ * Copyright 2015 David Coffill
+ * Licensed under the terms of the GPLv2
+ */
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>

@@ -1,6 +1,7 @@
-// (C) 2014 David Coffill
-// UCSB CS 130A, Fall 2014
-// Project 2
+/*
+ * Copyright 2014 David Coffill
+ * Licensed under the terms of the GPLv2
+ */
 
 #ifndef HEAP_H
 #define HEAP_H
@@ -9,10 +10,9 @@
 
 struct heap
 {
-	// variables
-	char **data; // pointer to array of pointers
+	char **data;
 	int size;
-	int end; // index of last occupied place in heap
+	int end; /* index of last occupied place in heap */
 	struct mutex lock;
 	wait_queue_head_t read_queue;
 };
