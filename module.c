@@ -44,8 +44,66 @@ out:
 
 static ssize_t heaper_read(struct file *file, char __user *out, size_t size, loff_t *off)
 {
+	struct heap *heap = (struct heap *)file->private_data;
+	char *string = NULL;
+	int result = 0;
 	printk(KERN_INFO "Heaper read()\n");
-	return 0;
+
+	if (unlikely(heap == NULL))
+	{
+		result = -EFAULT;
+		goto out;
+	}
+
+	if (mutex_lock_interruptible(&heap->lock))
+	{
+		result = -ERESTART;
+		goto out;
+	}
+
+	/* Block until heap is no longer empty */
+	while (heap->end == 0)
+	{
+		mutex_unlock(&heap->lock);
+		if (file->f_flags & O_NONBLOCK)
+		{
+			result = -EAGAIN;
+			goto out;
+		}
+
+		if(wait_event_interruptible(heap->read_queue, heap->end != 0))
+		{
+			result = -ERESTART;
+			goto out;
+		}
+
+		/* Attempt to acquire the lock again */
+		if (mutex_lock_interruptible(&heap->lock))
+		{
+			result = -ERESTART;
+			goto out;
+		}
+	}
+
+	string = delete_min(heap);
+	printk(KERN_INFO "Retrieved %lu byte string", strlen(string) + 1);
+	/* Length of string or requested length from user, whichever is smaller */
+	size = min(size, strlen(string) + 1);
+
+	if (copy_to_user(out, string, size))
+	{
+		result = -EFAULT;
+		/* something failed, so reinsert string into heap */
+		heap_insert(heap, string);
+		goto out_unlock;
+	}
+	result = size;
+	kfree(string);
+
+out_unlock:
+	mutex_unlock(&heap->lock);
+out:
+	return result;
 }
 
 static ssize_t heaper_write(struct file *file, const char __user *in, size_t size, loff_t *off)
@@ -87,6 +145,8 @@ static ssize_t heaper_write(struct file *file, const char __user *in, size_t siz
 
 	string[size - 1] = '\0';	/* ensure string is null terminated */
 	heap_insert(heap, string);
+	wake_up_interruptible(&heap->read_queue);
+	result = size;
 
 out_unlock:
 	mutex_unlock(&heap->lock);
