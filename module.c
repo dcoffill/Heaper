@@ -49,37 +49,31 @@ static ssize_t heaper_read(struct file *file, char __user *out, size_t size, lof
 	int result = 0;
 	printk(KERN_INFO "Heaper read()\n");
 
-	if (unlikely(heap == NULL))
-	{
+	if (unlikely(heap == NULL)) {
 		result = -EFAULT;
 		goto out;
 	}
 
-	if (mutex_lock_interruptible(&heap->lock))
-	{
+	if (mutex_lock_interruptible(&heap->lock)) {
 		result = -ERESTART;
 		goto out;
 	}
 
 	/* Block until heap is no longer empty */
-	while (heap->end == 0)
-	{
+	while (heap->end == 0) {
 		mutex_unlock(&heap->lock);
-		if (file->f_flags & O_NONBLOCK)
-		{
+		if (file->f_flags & O_NONBLOCK) {
 			result = -EAGAIN;
 			goto out;
 		}
 
-		if(wait_event_interruptible(heap->read_queue, heap->end != 0))
-		{
+		if(wait_event_interruptible(heap->read_queue, heap->end != 0)) {
 			result = -ERESTART;
 			goto out;
 		}
 
 		/* Attempt to acquire the lock again */
-		if (mutex_lock_interruptible(&heap->lock))
-		{
+		if (mutex_lock_interruptible(&heap->lock)) {
 			result = -ERESTART;
 			goto out;
 		}
@@ -90,8 +84,7 @@ static ssize_t heaper_read(struct file *file, char __user *out, size_t size, lof
 	/* Length of string or requested length from user, whichever is smaller */
 	size = min(size, strlen(string) + 1);
 
-	if (copy_to_user(out, string, size))
-	{
+	if (copy_to_user(out, string, size)) {
 		result = -EFAULT;
 		/* something failed, so reinsert string into heap */
 		heap_insert(heap, string);
@@ -111,33 +104,29 @@ static ssize_t heaper_write(struct file *file, const char __user *in, size_t siz
 	struct heap *heap = (struct heap *)file->private_data;
 	char *string = NULL;
 	int result = 0;
-	if (unlikely(heap->end == heap->size - 1))
-	{
+	if (unlikely(heap->end == heap->size - 1)) {
 		result = -ENOBUFS;
 		goto out;
 	}
 
-	if (unlikely(heap == NULL))
-	{
+	if (unlikely(heap == NULL)) {
 		result = -EFAULT;
 		goto out;
 	}
 
-	if (mutex_lock_interruptible(&heap->lock))
-	{
+	if (mutex_lock_interruptible(&heap->lock)) {
 		result = -ERESTART;
 		goto out;
 	}
 
 	string = (char *)kmalloc(size, GFP_KERNEL);
-	if (unlikely(string == NULL))
-	{
+
+	if (unlikely(string == NULL)) {
 		result = -EFAULT;
 		goto out_unlock;
 	}
 
-	if (copy_from_user(string, in, size))
-	{
+	if (copy_from_user(string, in, size)) {
 		result = -EFAULT;
 		goto out_unlock;
 	}
@@ -158,6 +147,7 @@ out:
 static int heaper_close(struct inode *inode, struct file *file)
 {
 	printk(KERN_INFO "Heaper close()\n");
+	free_heap((struct heap *)file->private_data);
 	return 0;
 }
 
@@ -178,8 +168,9 @@ static struct miscdevice heaper_misc_device = {
 
 static int __init heaper_init(void)
 {
-	if (!buffer_size)
+	if (!buffer_size) {
 		return -1;
+	}
 
 	misc_register(&heaper_misc_device);
 	printk(KERN_INFO "heaper device has been registered with buffer size %lu bytes\n",
