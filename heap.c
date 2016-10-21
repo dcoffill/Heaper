@@ -16,6 +16,7 @@ struct heap* init_heap(int size)
 		goto out;
 	}
 	mutex_init(&heap->lock);
+	init_waitqueue_head(&heap->read_queue);
 	heap->size = size + 1; // array is 1 bigger than size we're given, since index 0 unused
 	heap->end = 0;
 
@@ -40,7 +41,7 @@ void heap_insert(struct heap *heap, char *string)
 }
 
 // Delete the minimum item in the heap, then correct order and shape properties
-char* deleteMin(struct heap *heap)
+char* delete_min(struct heap *heap)
 {
 	char *min;
 	if (heap->end == 0)  // heap is empty, so don't try remove anything!
