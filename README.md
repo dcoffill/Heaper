@@ -5,7 +5,7 @@ A toy Linux kernel module which implements a min-heap priority queue as a charac
 
 In a way, it behaves somewhat like a priority-queue meets a UNIX pipe.  The example.c file contains an example program where a parent and child process use Heaper to pass prioritized data (grabbing the shortest string currently in the buffer).
 
-Based loosely on [an article by Linux Voice](http://www.linuxvoice.com/be-a-kernel-hacker/).
+`module.c` is based on code from [an article by Linux Voice](http://www.linuxvoice.com/be-a-kernel-hacker/).
 
 Licensed under the GPLv2.
 
